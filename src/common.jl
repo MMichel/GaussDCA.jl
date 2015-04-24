@@ -121,7 +121,17 @@ function compute_weights(Z::Matrix{Int8}, q, theta::Symbol)
         compress_Z(Z) :
         [Z[:,i]::Vector{Int8} for i = 1:M]
     theta = compute_theta(cZ, N, M)
-    return compute_weights(cZ, theta, N, M)
+    W, Meff = compute_weights(cZ, theta, N, M)
+    MeffPerPos = zeros(N)
+    for i = 1:M
+        for j = 1:N
+            if Z[j,i] != 21
+                MeffPerPos[j] += W[i]
+            end
+        end    
+    end
+    println("MeffPerPos = $MeffPerPos")
+    return W, Meff
 end
 
 function compute_weights(Z::Matrix{Int8}, q, theta::Real)
