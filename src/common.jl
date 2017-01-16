@@ -1,5 +1,6 @@
 include("unsafe_array.jl")
 using .Unsafe
+using Compat
 
 const PACKBITS = 64
 const _u = 0x0084210842108421
@@ -8,16 +9,16 @@ const _alt = 0x007c1f07c1f07c1f
 const packfactor = div(PACKBITS, 5)
 const packrest = PACKBITS % 5
 
-const _msk = ~(uint64(0));
+@compat const _msk = ~(UInt64(0));
 
 clength(l::Int) = div(l-1, packfactor) + 1
 crest(l::Int)   = (l-1) % packfactor + 1
 
-nnz_aux(x::Uint64) = ((x | (x >>> 1) | (x >>> 2) | (x >>> 3) | (x >>> 4)) & _u)
+nnz_aux(x::UInt64) = ((x | (x >>> 1) | (x >>> 2) | (x >>> 3) | (x >>> 4)) & _u)
 
-nz_aux(nx::Uint64) = (nx & (nx >>> 1) & (nx >>> 2) & (nx >>> 3) & (nx >>> 4) & _u)
+nz_aux(nx::UInt64) = (nx & (nx >>> 1) & (nx >>> 2) & (nx >>> 3) & (nx >>> 4) & _u)
 
-nz_aux2(nx::Uint64, s) = nz_aux(nx) & (_msk >>> s)
+nz_aux2(nx::UInt64, s) = nz_aux(nx) & (_msk >>> s)
 
 macro collapse(z)
     quote
@@ -29,13 +30,13 @@ macro collapse(z)
     end
 end
 
-function compress_Z(Z::Matrix{Int8})
+@compat function compress_Z(Z::Matrix{Int8})
     N, M = size(Z)
     ZZ = Vector{Int8}[Z[:,i] for i = 1:M]
 
     cl = clength(N)
 
-    cZ = [zeros(Uint64, cl) for i=1:M]
+    cZ = [zeros(UInt64, cl) for i=1:M]
 
     @inbounds for i = 1:M
         cZi = cZ[i]
@@ -43,7 +44,7 @@ function compress_Z(Z::Matrix{Int8})
         for k = 1:N
             k0 = div(k-1, packfactor)+1
             k1 = (k-1) % packfactor
-            cZi[k0] |= (uint64(ZZi[k]) << 5*k1)
+            cZi[k0] |= (UInt64(ZZi[k]) << 5*k1)
         end
     end
 
@@ -52,14 +53,14 @@ end
 
 function remove_duplicate_seqs(Z::Matrix{Int8})
     N, M = size(Z)
-    hZ = Array(Uint, M)
+    hZ = Array(UInt, M)
     @inbounds for i = 1:M
         hZ[i] = hash(Z[:,i])
     end
     print("removing duplicate sequences... ")
 
     ref_seq_ind = Array(Int, M)
-    ref_seq = Dict{Uint,Int}()
+    ref_seq = Dict{UInt,Int}()
     @inbounds for i = 1:M
         ref_seq_ind[i] = get!(ref_seq, hZ[i], i)
     end
@@ -148,16 +149,16 @@ end
     #U * L * U'
 #end
 
-function compute_FN(mJ::Matrix{Float64}, N::Int, q::Integer)
+@compat function compute_FN(mJ::Matrix{Float64}, N::Int, q::Integer)
 
-    q = int(q)
+    q = Int(q)
     s = q - 1
 
     mJij = Array(Float64, s, s)
     amJi = Array(Float64, s)
     amJj = Array(Float64, s)
-    fs = float64(s)
-    fs2 = float64(s^2)
+    fs = Float64(s)
+    fs2 = Float64(s^2)
 
     FN = zeros(N, N)
 
